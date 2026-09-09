@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>¿Serpiente o flor?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --azul: #8CC5E3;
+    --verde: #0D7E87;
+    --coral: #F55F74;
+    --violeta: #4A2377;
+    --fondo: #F7F5F2;
+    --papel: #FFFFFF;
+    --gris: #6B6B6B;
+    --negro: #1A1A1A;
+    --borde: #E5E1DA;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--fondo);
+    color: var(--negro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  #app {
+    width: 100%;
+    max-width: min(94vw, 460px);
+  }
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1.1;
+    margin-bottom: 14px;
+    letter-spacing: -0.5px;
+  }
+  h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 600;
+    font-size: 24px;
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
+  }
+  p { line-height: 1.5; margin-bottom: 12px; font-size: 16px; }
+  .muted { color: var(--gris); font-size: 14px; }
+  strong { font-weight: 600; }
+  code { background: #EEE; padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+
+  button {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    background: var(--verde);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: transform 0.05s;
+  }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .progress {
+    font-size: 11px;
+    color: var(--gris);
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+    height: 14px;
+  }
+
+  .stage {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background: var(--papel);
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 3px;
+    padding: 3px;
+    position: relative;
+  }
+  .cell {
+    background: var(--papel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .cell.missing {
+    background: #FFE0E0;
+    color: var(--coral);
+    font-size: 10px;
+    text-align: center;
+    padding: 4px;
+  }
+
+  .fixation {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    background: var(--papel);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 64px;
+    color: var(--negro);
+    font-weight: 200;
+    line-height: 1;
+  }
+
+  .feedback {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px 18px;
+    background: rgba(255,255,255,0.97);
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 20px;
+    z-index: 10;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .feedback.ok { color: var(--verde); }
+  .feedback.bad { color: var(--coral); }
+
+  /* Resultados */
+  .bar-row { margin: 18px 0; }
+  .bar-label {
+    font-size: 14px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .bar-label strong {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .bar-track {
+    height: 22px;
+    background: #EAE7E2;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0;
+  }
+  .bar-fill.serpiente { background: var(--verde); }
+  .bar-fill.flor { background: var(--coral); }
+
+  .diff-box {
+    margin-top: 24px;
+    padding: 22px 18px;
+    background: var(--papel);
+    border-radius: 6px;
+    text-align: center;
+    border: 1px solid var(--borde);
+  }
+  .diff-box .valor {
+    font-family: 'Playfair Display', serif;
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--violeta);
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -1px;
+  }
+  .diff-box .etiqueta { color: var(--gris); font-size: 13px; }
+
+  .warning {
+    background: #FFF3CD;
+    border-left: 3px solid #E6A23C;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #6B5A2B;
+    margin: 16px 0;
+    border-radius: 2px;
+  }
+  .warning code { background: rgba(0,0,0,0.08); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// IMÁGENES — Pegá acá las URLs de tus imágenes.
+// Podés usar rutas relativas (ej: "img/serp1.jpg") si las subís al
+// repo, o URLs externas (Wikimedia, tu servidor, etc.). Ideal: 6+ por
+// categoría, todas con fondo blanco/neutro y ratio ~cuadrado.
+// ═══════════════════════════════════════════════════════════════
+const IMAGENES = {
+  serpientes: [
+    "img/serpiente_01.jpg",
+    "img/serpiente_02.jpg",
+    "img/serpiente_03.jpg",
+    "img/serpiente_04.jpg",
+    "img/serpiente_05.jpg",
+    "img/serpiente_06.jpg",
+    "img/serpiente_07.jpg",
+    "img/serpiente_08.jpg",
+    "img/serpiente_09.jpg"
+  ],
+  flores: [
+    "img/flor_01.jpg",
+    "img/flor_02.jpg",
+    "img/flor_03.jpg",
+    "img/flor_04.jpg",
+    "img/flor_05.jpg",
+    "img/flor_06.jpg",
+    "img/flor_07.jpg",
+    "img/flor_08.jpg",
+    "img/flor_09.jpg"
+  ]
+};
+
+// ═══ PARÁMETROS ═══
+const N_PRACTICE = 3;
+const N_POR_CONDICION = 10;      // pruebas reales por condición → 20 en total
+const FIXATION_MS = 500;
+const FEEDBACK_MS = 700;
+const ITI_MS = 300;              // inter-trial interval
+const RT_MIN = 200;              // ms — abajo de esto se descarta
+const RT_MAX = 5000;             // ms — arriba de esto se descarta
+
+// ═══ STATE ═══
+let phase = "instrucciones";
+let trials = [];
+let idx = 0;
+let onset = 0;
+let results = { practice: [], experiment: [] };
+let experimentBuffer = null;
+
+const app = document.getElementById("app");
+
+// ═══ HELPERS ═══
+const shuffle = arr => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const sampleN = (arr, n) => {
+  if (arr.length >= n) return shuffle(arr).slice(0, n);
+  // fallback con reemplazo si hay pocos exemplars
+  return Array.from({length: n}, () => arr[Math.floor(Math.random() * arr.length)]);
+};
+const median = xs => {
+  const s = [...xs].sort((a,b) => a-b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m-1] + s[m]) / 2;
+};
+
+// ═══ TRIALS ═══
+function buildTrial(condicion, esPractica = false) {
+  const esSerpTarget = condicion === "serpiente_target";
+  const pools = esSerpTarget
+    ? { target: IMAGENES.serpientes, distractor: IMAGENES.flores }
+    : { target: IMAGENES.flores, distractor: IMAGENES.serpientes };
+  const targetImg = pools.target[Math.floor(Math.random() * pools.target.length)];
+  const distractores = sampleN(pools.distractor, 8);
+  const targetPos = Math.floor(Math.random() * 9);
+  const grid = [...distractores];
+  grid.splice(targetPos, 0, targetImg);
+  grid.length = 9;
+  return { condicion, targetPos, grid, esPractica };
+}
+
+function buildExperimentTrials() {
+  const trs = [];
+  for (let i = 0; i < N_POR_CONDICION; i++) {
+    trs.push(buildTrial("serpiente_target"));
+    trs.push(buildTrial("flor_target"));
+  }
+  return shuffle(trs);
+}
+
+function buildPracticeTrials() {
+  return shuffle([
+    buildTrial("serpiente_target", true),
+    buildTrial("flor_target", true),
+    buildTrial(Math.random() < 0.5 ? "serpiente_target" : "flor_target", true)
+  ]);
+}
+
+// ═══ PRELOAD ═══
+async function preloadImages() {
+  const all = [...IMAGENES.serpientes, ...IMAGENES.flores];
+  await Promise.all(all.map(src => new Promise(res => {
+    const img = new Image();
+    img.onload = res;
+    img.onerror = res;
+    img.src = src;
+  })));
+}
+
+// ═══ RENDER ═══
+function renderInstrucciones() {
+  const missing = IMAGENES.serpientes.length < 4 || IMAGENES.flores.length < 4;
+  app.innerHTML = `
+    <h1>¿Serpiente o flor?</h1>
+    <p>Vas a ver una grilla de 9 imágenes. En cada prueba, <strong>una es distinta al resto</strong>: una serpiente entre flores, o una flor entre serpientes.</p>
+    <p>Tocá la imagen distinta lo <strong>más rápido y preciso</strong> que puedas.</p>
+    <p class="muted">Primero, ${N_PRACTICE} pruebas de práctica. Después, ${N_POR_CONDICION * 2} pruebas reales.</p>
+    ${missing ? `<div class="warning"><strong>⚠ Faltan imágenes.</strong> Editá el archivo HTML y agregá al menos 4 URLs en <code>IMAGENES.serpientes</code> y 4 en <code>IMAGENES.flores</code>.</div>` : ""}
+    <button id="start" ${missing ? "disabled" : ""}>Empezar práctica</button>
+  `;
+  if (!missing) {
+    document.getElementById("start").onclick = async (e) => {
+      e.target.textContent = "Cargando imágenes…";
+      e.target.disabled = true;
+      await preloadImages();
+      startPhase("practice");
+    };
+  }
+}
+
+function startPhase(newPhase) {
+  phase = newPhase;
+  idx = 0;
+  if (phase === "practice") {
+    trials = buildPracticeTrials();
+    experimentBuffer = buildExperimentTrials();
+  } else {
+    trials = experimentBuffer;
+  }
+  runTrial();
+}
+
+function renderFixation() {
+  app.innerHTML = `
+    <div class="progress">${phase === "practice" ? "Práctica" : "Prueba"} ${idx + 1} de ${trials.length}</div>
+    <div class="fixation">+</div>
+  `;
+}
+
+function renderGrid(trial) {
+  const cells = trial.grid.map((src, i) =>
+    `<div class="cell" data-pos="${i}"><img src="${src}" alt="" draggable="false"></div>`
+  ).join("");
+  app.innerHTML = `
+    <div class="progress">${phase === "practice" ? "Práctica" : "Prueba"} ${idx + 1} de ${trials.length}</div>
+    <div class="stage" id="stage">${cells}</div>
+  `;
+  const stage = document.getElementById("stage");
+  // Marcar imágenes que fallan
+  stage.querySelectorAll("img").forEach(img => {
+    img.onerror = () => {
+      img.parentElement.classList.add("missing");
+      img.parentElement.textContent = "sin imagen";
+    };
+  });
+  // pointerdown = menor latencia que click
+  stage.addEventListener("pointerdown", handleTap, { once: true });
+  onset = performance.now();
+}
+
+function handleTap(e) {
+  const rt = performance.now() - onset;
+  const cell = e.target.closest(".cell");
+  if (!cell) {
+    // tap en gap: reengancho listener
+    document.getElementById("stage").addEventListener("pointerdown", handleTap, { once: true });
+    return;
+  }
+  const pos = parseInt(cell.dataset.pos);
+  const trial = trials[idx];
+  const correct = pos === trial.targetPos;
+  const record = {
+    condicion: trial.condicion,
+    targetPos: trial.targetPos,
+    pos, rt, correct
+  };
+  const stage = document.getElementById("stage");
+  stage.style.pointerEvents = "none";
+
+  if (phase === "practice") {
+    results.practice.push(record);
+    showFeedback(correct);
+    setTimeout(nextTrial, FEEDBACK_MS);
+  } else {
+    results.experiment.push(record);
+    setTimeout(nextTrial, ITI_MS);
+  }
+}
+
+function showFeedback(correct) {
+  const stage = document.getElementById("stage");
+  const fb = document.createElement("div");
+  fb.className = "feedback " + (correct ? "ok" : "bad");
+  fb.textContent = correct ? "✓ correcto" : "✗ ups";
+  stage.appendChild(fb);
+}
+
+function nextTrial() {
+  idx++;
+  if (idx >= trials.length) {
+    if (phase === "practice") renderTransition();
+    else renderResults();
+    return;
+  }
+  runTrial();
+}
+
+function runTrial() {
+  renderFixation();
+  setTimeout(() => renderGrid(trials[idx]), FIXATION_MS);
+}
+
+function renderTransition() {
+  app.innerHTML = `
+    <h1>Listo</h1>
+    <p>Ahora vienen las <strong>${N_POR_CONDICION * 2} pruebas reales</strong>.</p>
+    <p>Lo más rápido y preciso que puedas. Esta vez no hay feedback.</p>
+    <p class="muted">Al final vas a ver tus tiempos.</p>
+    <button id="start">Empezar</button>
+  `;
+  document.getElementById("start").onclick = () => startPhase("experiment");
+}
+
+function renderResults() {
+  const validos = results.experiment.filter(r =>
+    r.correct && r.rt >= RT_MIN && r.rt <= RT_MAX
+  );
+  const serp = validos.filter(r => r.condicion === "serpiente_target").map(r => r.rt);
+  const flor = validos.filter(r => r.condicion === "flor_target").map(r => r.rt);
+
+  const medSerp = serp.length ? Math.round(median(serp)) : null;
+  const medFlor = flor.length ? Math.round(median(flor)) : null;
+  const diff = (medSerp !== null && medFlor !== null) ? medFlor - medSerp : null;
+
+  const maxBar = Math.max(medSerp || 1, medFlor || 1);
+  const pctSerp = medSerp ? (medSerp / maxBar) * 100 : 0;
+  const pctFlor = medFlor ? (medFlor / maxBar) * 100 : 0;
+
+  let interp = "";
+  if (diff === null) {
+    interp = "Faltan pruebas válidas para calcular una diferencia.";
+  } else if (diff > 0) {
+    interp = `Tardaste <strong>${diff} ms más</strong> en encontrar la flor entre serpientes que la serpiente entre flores. Es el patrón clásico.`;
+  } else if (diff < 0) {
+    interp = `Tardaste <strong>${Math.abs(diff)} ms más</strong> en encontrar la serpiente entre flores. En tu caso el efecto típico no apareció.`;
+  } else {
+    interp = "Diferencia igual a cero.";
+  }
+
+  app.innerHTML = `
+    <h2>Tus tiempos</h2>
+    <div class="bar-row">
+      <div class="bar-label">
+        <span>Serpiente entre flores</span>
+        <strong>${medSerp ?? "—"} ms</strong>
+      </div>
+      <div class="bar-track"><div class="bar-fill serpiente" id="b1"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">
+        <span>Flor entre serpientes</span>
+        <strong>${medFlor ?? "—"} ms</strong>
+      </div>
+      <div class="bar-track"><div class="bar-fill flor" id="b2"></div></div>
+    </div>
+    <div class="diff-box">
+      <div class="valor">${diff !== null ? (diff > 0 ? "+" : "") + diff + " ms" : "—"}</div>
+      <div class="etiqueta">Diferencia (flor − serpiente)</div>
+    </div>
+    <p style="margin-top:22px">${interp}</p>
+    <p class="muted">Pruebas válidas: ${serp.length} serpiente · ${flor.length} flor (de ${N_POR_CONDICION} cada una). Se descartan errores y respuestas fuera de ${RT_MIN}–${RT_MAX} ms.</p>
+  `;
+  requestAnimationFrame(() => {
+    document.getElementById("b1").style.width = pctSerp + "%";
+    document.getElementById("b2").style.width = pctFlor + "%";
+  });
+}
+
+// ═══ ARRANQUE ═══
+renderInstrucciones();
+</script>
+</body>
+</html>
